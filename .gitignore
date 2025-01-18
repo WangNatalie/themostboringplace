@@ -22,10 +22,6 @@ logs/
 .DS_Store
 Thumbs.db
 
-# Package manager lock files (uncomment if you don't want to commit them)
-# package-lock.json
-# yarn.lock
-
 # Coverage or test reports
 coverage/
 *.tgz

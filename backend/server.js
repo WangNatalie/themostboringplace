@@ -1,8 +1,9 @@
-import express from 'express';
-import mongoose from 'mongoose';
-import dotenv from 'dotenv';
-import cors from 'cors';
-import cityRoutes from './routes/cities.js';
+const express = require('express');
+const mongoose = require('mongoose');
+const dotenv = require('dotenv');
+const cors = require('cors');
+// const cityRoutes = require('./routes/cityRoutes');
+const locationBoringnessRoute = require('./locationBoringness/locationBoringnessRoute.js'); // For locationBoringness feature
 
 dotenv.config();
 
@@ -15,8 +16,8 @@ mongoose.connect(MONGODB_URI)
   .then(() => console.log('Connected to MongoDB successfully'))
   .catch((err) => console.error('MongoDB connection error:', err));
 
-  // Error handling for MongoDB connection
-mongoose.connection.on('error', err => {
+// Error handling for MongoDB connection
+mongoose.connection.on('error', (err) => {
   console.error('MongoDB connection error:', err);
 });
 
@@ -43,8 +44,10 @@ app.get('/test', (req, res) => {
   res.json({ message: 'Test endpoint working!' });
 });
 
-const PORT = 5000;
+// Location Boringness Routes
+app.use('/api', locationBoringnessRoute);
 
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
