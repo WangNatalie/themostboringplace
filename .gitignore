@@ -1,1 +1,36 @@
+# Environment variables
 .env
+
+# Node.js modules
+node_modules/
+
+# Build output
+build/
+dist/
+public/
+
+# Log files
+*.log
+logs/
+
+# IDE/editor settings
+.vscode/
+.idea/
+*.sublime-project
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Package manager lock files (uncomment if you don't want to commit them)
+# package-lock.json
+# yarn.lock
+
+# Coverage or test reports
+coverage/
+*.tgz
+
+# Temporary files
+*.swp
+*.swo
+*.bak
