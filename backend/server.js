@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const cors = require('cors');
 // const cityRoutes = require('./routes/cityRoutes');
-const locationBoringnessRoute = require('./locationBoringness/locationBoringnessRoute.js'); // For locationBoringness feature
+const boringscore = require('./locationBoringness/locationBoringnessRoute.js'); // For locationBoringness feature
 
 dotenv.config();
 
@@ -45,9 +45,11 @@ app.get('/test', (req, res) => {
 });
 
 // Location Boringness Routes
-app.use('/api', locationBoringnessRoute);
+app.use('/api', boringscore);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
+
+// test
