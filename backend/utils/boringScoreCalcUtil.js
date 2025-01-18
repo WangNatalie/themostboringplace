@@ -1,52 +1,101 @@
-// locationBoringness/utils/boringScoreCalcUtil.js
 const axios = require('axios');
 
+const PLACE_TYPE_SCORES = {
+    // 'bar': 1,
+    'night_club': 2,
+    'casino': 3,
+    'liquor_store': 8,
+    'place_of_worship': 7
+};
 
-// Google Places API key (ensure this is in your .env file, e.g., GOOGLE_API_KEY)
-const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
+async function calculateLocationScore(latitude, longitude) {
+    const apiKey = process.env.GOOGLE_API_KEY;
+    if (!apiKey) {
+        throw new Error('Google API key is not configured');
+    }
 
-async function calculateBoringnessScore(latitude, longitude) {
-  // Set the Google Places API URL
-  const placesApiUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=10000&type=point_of_interest&key=${GOOGLE_API_KEY}`;
+    const baseUrl = 'https://maps.googleapis.com/maps/api/place/nearbysearch/json';
+    let allPlaces = [];
+    let pageToken = null;
 
-  try {
-    const response = await axios.get(placesApiUrl);
-    const landmarks = response.data.results;
+    try {
+        do {
+            const params = {
+                location: `${latitude},${longitude}`,
+                radius: 10000,
+                key: apiKey,
+                type: Object.keys(PLACE_TYPE_SCORES).join('|')
+            };
 
-    console.log('API response data (array of all landmarks) **NOT WORKING:', landmarks); //logs response data
+            if (pageToken) {
+                params.pagetoken = pageToken;
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            }
 
-    // Assign boringness score
-    let boringnessScore = 0;
+            const response = await axios.get(baseUrl, { params });
+            
+            if (response.data.status === 'REQUEST_DENIED') {
+                throw new Error(`API request denied: ${response.data.error_message}`);
+            }
 
-    landmarks.forEach(landmark => {
-      const interestingnessScore = assignInterestingnessScore(landmark);
-      console.log('Interestingness score for current landmark:', interestingnessScore); //logs interestingness score
-      boringnessScore += interestingnessScore;
-    });
+            if (response.data.status !== 'OK' && response.data.status !== 'ZERO_RESULTS') {
+                throw new Error(`API returned status: ${response.data.status}`);
+            }
 
-    console.log('Boringness score calculated:', boringnessScore); //logs boringness score
+            const places = response.data.results || [];
+            const filteredPlaces = places.filter(place => 
+                place.types.some(type => type in PLACE_TYPE_SCORES)
+            );
+            
+            allPlaces = [...allPlaces, ...filteredPlaces];
+            pageToken = response.data.next_page_token;
 
-    // Calculate final boringness score (1 / sum of interestingness)
-    const finalBoringnessScore = 1 / boringnessScore;
-    return finalBoringnessScore;
-  } catch (error) {
-    console.error('Error fetching data from Google Places API:', error);
-    throw new Error('Error fetching landmarks or calculating boringness score.');
-  }
+        } while (pageToken);
+
+        // Calculate the total score and gather statistics
+        const scoreDetails = Object.keys(PLACE_TYPE_SCORES).reduce((acc, type) => {
+            acc[type] = {
+                count: 0,
+                score: 0
+            };
+            return acc;
+        }, {});
+
+        // Calculate scores for each place
+        allPlaces.forEach(place => {
+            place.types.forEach(type => {
+                if (type in PLACE_TYPE_SCORES) {
+                    scoreDetails[type].count += 1;
+                    scoreDetails[type].score += PLACE_TYPE_SCORES[type];
+                }
+            });
+        });
+
+        // Calculate total score
+        const totalScore = Object.values(scoreDetails).reduce((sum, detail) => sum + detail.score, 0);
+
+        return {
+            totalScore,
+            details: scoreDetails,
+            numberOfPlaces: allPlaces.length,
+            places: allPlaces.map(place => ({
+                name: place.name,
+                types: place.types.filter(type => type in PLACE_TYPE_SCORES),
+                score: place.types.reduce((score, type) => 
+                    score + (PLACE_TYPE_SCORES[type] || 0), 0
+                ),
+                address: place.vicinity,
+                location: place.geometry.location
+            }))
+        };
+
+    } catch (error) {
+        console.error('Error fetching places:', error);
+        throw error;
+    }
 }
 
-// A simple function that assigns an "interestingness" score to a landmark based on its type
-function assignInterestingnessScore(landmark) {
-  const interestingnessMap = {
-    restaurant: 2,
-    park: 3,
-    museum: 4,
-    theater: 5,
-    // Add more types with scores as needed
-  };
-
-  const type = landmark.types && landmark.types[0];
-  return interestingnessMap[type] || 1; // Default to score 1 if the type is not found
-}
-
-module.exports = { calculateBoringnessScore };
+module.exports = {
+    calculateLocationScore,
+    PLACE_TYPE_SCORES
+};
